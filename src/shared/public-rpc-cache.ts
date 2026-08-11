@@ -1,3 +1,5 @@
+import { stripBasePath } from '@/config/public-base';
+
 const PUBLIC_SHARED_RPC_PATHS = new Set([
   '/api/news/v1/list-feed-digest',
   '/api/displacement/v1/get-displacement-summary',
@@ -86,7 +88,8 @@ export function isPublicSharedRpcRequest(urlLike: string | URL, method = 'GET'):
     return false;
   }
 
-  const pathname = url.pathname.length > 1 ? url.pathname.replace(/\/+$/, '') : url.pathname;
+  const strippedPathname = stripBasePath(url.pathname);
+  const pathname = strippedPathname.length > 1 ? strippedPathname.replace(/\/+$/, '') : strippedPathname;
   if (!PUBLIC_SHARED_RPC_PATHS.has(pathname)) return false;
 
   // Shape-check the caller's query, not the router's echo of the path segment.
@@ -105,7 +108,7 @@ export function addPublicSharedRpcMarker(urlLike: string | URL): string {
   const base = typeof location === 'undefined' ? 'https://worldmonitor.invalid' : location.href;
   const url = new URL(original, base);
 
-  if (!PUBLIC_SHARED_RPC_PATHS.has(url.pathname)) {
+  if (!PUBLIC_SHARED_RPC_PATHS.has(stripBasePath(url.pathname))) {
     throw new Error(`not an allowlisted public RPC: ${url.pathname}`);
   }
   url.searchParams.set('public', '1');

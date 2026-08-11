@@ -38,3 +38,18 @@ export function publicAssetUrl(path: string): string {
   if (BASE_URL === '/') return path;
   return `${BASE_URL.replace(/\/$/, '')}${path}`;
 }
+
+/**
+ * Strip the configured base-path prefix from a pathname so root-anchored
+ * pathname comparisons (route tables, RPC allowlists) work unchanged in a
+ * subpath deployment. E.g. with BASE_URL='/dashboard_v2/',
+ * stripBasePath('/dashboard_v2/api/foo') === '/api/foo'. Root deployments and
+ * paths outside the subpath mount are returned unchanged.
+ */
+export function stripBasePath(pathname: string): string {
+  if (BASE_URL === '/' || !pathname.startsWith('/')) return pathname;
+  const prefix = BASE_URL.replace(/\/$/, '');
+  if (pathname === prefix) return '/';
+  if (pathname.startsWith(`${prefix}/`)) return pathname.slice(prefix.length);
+  return pathname;
+}

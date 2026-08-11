@@ -1,4 +1,5 @@
 import DOMPurify from 'dompurify';
+import { publicAssetUrl } from '@/config/public-base';
 
 const PURIFY_CONFIG = {
   ALLOWED_TAGS: [
@@ -201,6 +202,6 @@ export function wrapProWidgetHtml(bodyContent: string): string {
   const id = `wm-${Math.random().toString(36).slice(2)}`;
   const token = createWidgetToken();
   widgetBodyStore.set(id, stripLeadingPanelHeader(bodyContent));
-  const src = `/wm-widget-sandbox.html#id=${encodeURIComponent(id)}&token=${encodeURIComponent(token)}`;
+  const src = `${publicAssetUrl('/wm-widget-sandbox.html')}#id=${encodeURIComponent(id)}&token=${encodeURIComponent(token)}`;
   return `<div class="wm-widget-shell wm-widget-pro"><iframe src="${src}" data-wm-id="${id}" data-wm-token="${token}" sandbox="allow-scripts" style="width:100%;height:400px;border:none;display:block;" title="Interactive widget"></iframe></div>`;
 }
