@@ -406,6 +406,9 @@ const RPC_CACHE_TIER: Record<string, CacheTier> = {
   // and therefore requires an explicit gateway cache tier. The two semantic
   // reads are POSTs and cache successful results inside their handlers.
   '/api/intelligence/v1/get-intel-timeline': 'slow',
+  // intel series buckets are a premium-gated pure store read; the entry exists
+  // for route-cache-tier parity and would be slow-browser in practice.
+  '/api/intelligence/v1/query-intel-series': 'slow',
   '/api/resilience/v1/get-resilience-score': 'slow',
   '/api/resilience/v1/get-resilience-ranking': 'slow',
   '/api/resilience/v1/get-runtime-manifest': 'no-store',
@@ -1698,7 +1701,11 @@ export function createDomainGateway(
     // already enforced 50/day + 60/min per userId in api/mcp.ts. A second
     // limiter here would create misleading double-counting and could 429
     // legitimate Pro tool fetches that pass the upstream cap.
-    if (!internalMcpVerified) {
+    // Local-first mode is a private instance with no anonymous public
+    // surface — the IP-based endpoint budgets (which exist to bound spend on
+    // provider-backed routes like summarize-article) only throttle a single
+    // user's own dashboard. Skip them so page-load fan-out isn't 429'd.
+    if (!internalMcpVerified && !localUnlock) {
       const endpointRlResponse = rateLimitPrincipalUserId
         ? await checkEndpointRateLimit(request, pathname, corsHeaders, {
             principalUserId: rateLimitPrincipalUserId,

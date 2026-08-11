@@ -128,6 +128,11 @@ function rateLimitDegradedResponse(corsHeaders) {
  *   degraded/429 response semantics. (#3531)
  */
 export async function checkRateLimit(request, corsHeaders, opts = {}) {
+  // Local-first mode (WM_LOCAL_UNLOCK=1): self-hosted private instance with no
+  // anonymous public surface. IP-based budgets (session issuance, LLM routes)
+  // would only throttle the operator's own dashboard fan-out, so skip them.
+  // Mirrors the gateway's localUnlock bypass in server/gateway.ts.
+  if (process.env.WM_LOCAL_UNLOCK === '1') return null;
   const policy = getRateLimitPolicy(opts);
   const rl = getRatelimit(policy);
   if (!rl) {
