@@ -16,6 +16,7 @@ import {
   type ProBannerPremiumStabilityState,
 } from '@/services/pro-banner-policy';
 import { t } from '@/services/i18n';
+import { isPersonalMode } from '@/shared/personal-mode';
 import { setTrustedHtml, trustedHtml } from '@/utils/dom-utils';
 
 
@@ -127,6 +128,7 @@ function writePremiumHint(premium: boolean): void {
 
 function hasLocalUnlockPremium(): boolean {
   return (
+    isPersonalMode() ||
     getSecretState('WORLDMONITOR_API_KEY').present ||
     isProWidgetEnabled() ||
     isWidgetFeatureEnabled()

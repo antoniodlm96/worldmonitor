@@ -1,6 +1,7 @@
 import { subscribeAuthState, type AuthSession } from '@/services/auth-state';
 import { mountUserButton, openSignIn, openSignUp } from '@/services/clerk';
 import { t } from '@/services/i18n';
+import { isPersonalMode } from '@/shared/personal-mode';
 import { setTrustedHtml, trustedHtml } from '@/utils/dom-utils';
 
 export class AuthHeaderWidget {
@@ -51,6 +52,9 @@ export class AuthHeaderWidget {
     this.container.removeAttribute('aria-busy');
     setTrustedHtml(this.container, trustedHtml('', 'legacy direct innerHTML migration'));
 
+    // Personal mode: no login/account surface at all.
+    if (isPersonalMode()) return;
+
     if (!state.user) {
       this.renderSignedOut();
       return;
@@ -64,6 +68,9 @@ export class AuthHeaderWidget {
     this.container.classList.add('auth-header-widget-pending');
     this.container.setAttribute('aria-busy', 'true');
     setTrustedHtml(this.container, trustedHtml('', 'legacy direct innerHTML migration'));
+
+    // Personal mode: no login/account surface at all.
+    if (isPersonalMode()) return;
 
     const signInSkeleton = document.createElement('span');
     signInSkeleton.className = 'auth-header-skeleton auth-header-skeleton-signin';

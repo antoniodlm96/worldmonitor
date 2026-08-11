@@ -10,6 +10,7 @@ import { reportEntitlementDesync } from '@/services/entitlement-desync-telemetry
 import { classifyPremiumDenial, type ClientEntitlementBelief } from '@/services/premium-denial';
 import { readClientEntitlementBelief } from '@/services/panel-gating';
 import { getAuthState } from '@/services/auth-state';
+import { isPersonalMode } from '@/shared/personal-mode';
 import { setTrustedHtml, trustedHtml } from '@/utils/dom-utils';
 
 
@@ -96,7 +97,7 @@ export function openWidgetChatModal(options: WidgetChatOptions): void {
   track('widget-ai-open', { panelId: options.existingSpec?.id });
 
   const currentTier: 'basic' | 'pro' = options.tier ?? options.existingSpec?.tier ?? 'basic';
-  const isPro = currentTier === 'pro';
+  const isPro = currentTier === 'pro' && !isPersonalMode();
 
   overlay = document.createElement('div');
   overlay.className = 'modal-overlay active';
