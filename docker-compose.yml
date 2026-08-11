@@ -19,8 +19,10 @@ services:
       args:
         # Subpath deployment: VITE_BASE_PATH=/dashboard_v2/ + VITE_WS_API_URL=/dashboard_v2
         # (see SELF_HOSTING.md). Defaults to origin-root deployment.
+        # VITE_LOCAL_UNLOCK=1 builds personal mode (suppress Pro banner/login UI).
         VITE_BASE_PATH: "${VITE_BASE_PATH:-/}"
         VITE_WS_API_URL: "${VITE_WS_API_URL:-}"
+        VITE_LOCAL_UNLOCK: "${VITE_LOCAL_UNLOCK:-}"
     image: worldmonitor:latest
     container_name: worldmonitor
     ports:

@@ -24,9 +24,13 @@ COPY . .
 #                    (default '/' = origin root). See vite.config.ts `base`.
 #   VITE_WS_API_URL  API base for installWebApiRedirect — must be the same
 #                    subpath without the trailing slash, e.g. /dashboard_v2
+#   VITE_LOCAL_UNLOCK  Personal-mode build (VITE_LOCAL_UNLOCK=1): suppress the
+#                    Pro banner, Pricing links and login widget client-side.
+#                    Must match the runtime WM_LOCAL_UNLOCK=1 on the app server.
 ARG VITE_BASE_PATH=/
 ARG VITE_WS_API_URL=
-ENV VITE_BASE_PATH=$VITE_BASE_PATH VITE_WS_API_URL=$VITE_WS_API_URL
+ARG VITE_LOCAL_UNLOCK=
+ENV VITE_BASE_PATH=$VITE_BASE_PATH VITE_WS_API_URL=$VITE_WS_API_URL VITE_LOCAL_UNLOCK=$VITE_LOCAL_UNLOCK
 
 # Compile TypeScript API handlers → self-contained ESM bundles
 # Output is api/**/*.js alongside the source .ts files

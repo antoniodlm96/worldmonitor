@@ -10,7 +10,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
 
       - name: Deploy with Docker Compose
         working-directory: /home/user/apps/worldmonitor
@@ -21,6 +21,10 @@ jobs:
           # of local .env state.
           VITE_BASE_PATH: /dashboard_v2/
           VITE_WS_API_URL: /dashboard_v2
+          # Personal mode: suppress the Pro banner, Pricing links and login UI
+          # (matches WM_LOCAL_UNLOCK=1 set on the app container via the server
+          # docker-compose.override.yml).
+          VITE_LOCAL_UNLOCK: "1"
         run: |
           git fetch origin
           git reset --hard origin/main
