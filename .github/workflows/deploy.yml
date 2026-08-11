@@ -1,0 +1,27 @@
+name: Deploy to myserver (worldmonitor)
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, wm]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy with Docker Compose
+        working-directory: /home/user/apps/worldmonitor
+        env:
+          # Self-hosted subpath deployment (Tailscale serve /dashboard_v2 ->
+          # container root). Mirrors the values in the server .env; kept here so
+          # a fresh container rebuild always uses the subpath build regardless
+          # of local .env state.
+          VITE_BASE_PATH: /dashboard_v2/
+          VITE_WS_API_URL: /dashboard_v2
+        run: |
+          git fetch origin
+          git reset --hard origin/main
+          docker compose up --build -d
