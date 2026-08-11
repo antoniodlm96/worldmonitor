@@ -622,6 +622,12 @@ export function __setWmSessionSentryEnqueueForTests(fn: typeof enqueueSentryCall
 // token to non-API paths even if they happen to be on the API host.
 export function isApiCallTarget(url: string, apiOrigin: string): boolean {
   if (url.startsWith('/api/')) return true;
+  // Subpath (self-hosted) deployments: relative /<base>/api/... requests are
+  // same-origin API calls even though the path does not start with /api/. A
+  // relative URL can only resolve against the current origin, so the match is
+  // safe. (installWebApiRedirect later rewrites the /api/ segment to the API
+  // base / target, so the token lands on the same origin it left from.)
+  if (url.startsWith('/') && /^\/[^/]+?\/api\//.test(url)) return true;
   if (apiOrigin === '') return false;
   let parsed: URL;
   try {

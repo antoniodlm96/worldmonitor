@@ -596,8 +596,11 @@ if ('__TAURI_INTERNALS__' in window || '__TAURI__' in window) {
 // `'serviceWorker' in navigator` is not a safe gate: in a sandboxed iframe the
 // property exists but reading it throws SecurityError (WORLDMONITOR-Y5), which
 // at module scope aborts every top-level statement below. Read it once, safely.
+// Self-hosted subpath deployments (Vite base !== '/') skip the service worker
+// entirely: registering at scope '/' would capture unrelated apps sharing the
+// origin, and the workbox precache manifest is built for the root mount.
 const swContainer = readServiceWorkerContainer();
-if (!('__TAURI_INTERNALS__' in window) && !('__TAURI__' in window) && swContainer) {
+if (!('__TAURI_INTERNALS__' in window) && !('__TAURI__' in window) && swContainer && import.meta.env.BASE_URL === '/') {
   installSwUpdateHandler({ version: __APP_VERSION__, swContainer });
 
   const SW_UPDATE_SUCCESS_INTERVAL_MS = 60 * 60 * 1000;

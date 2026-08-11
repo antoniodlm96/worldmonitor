@@ -370,6 +370,10 @@ import { PREMIUM_RPC_PATHS as WEB_PREMIUM_API_PATHS } from '@/shared/premium-pat
 const ALLOWED_REDIRECT_HOSTS = /^https:\/\/([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)*worldmonitor\.app(:\d+)?$/;
 
 function isAllowedRedirectTarget(url: string): boolean {
+  // Relative subpath (self-hosted deployments behind a subpath mount, e.g.
+  // VITE_WS_API_URL=/dashboard_v2). A relative target can only resolve against
+  // the current origin, so it cannot exfiltrate credentials cross-origin.
+  if (url.startsWith('/')) return true;
   try {
     const parsed = new URL(url);
     return ALLOWED_REDIRECT_HOSTS.test(parsed.origin) || parsed.hostname === 'localhost';
@@ -478,7 +482,9 @@ export function installWebApiRedirect(): void {
         const pathAndSearch = `${input.pathname}${input.search}`;
         if (input.origin === window.location.origin && shouldRedirectPath(pathAndSearch)) {
           const enriched = await enrichInitForPremium(pathAndSearch, init);
-          return fetchWithRedirectFallback(new URL(`${API_BASE}${pathAndSearch}`), input, enriched ? withCredentials(enriched) : withCredentials(init));
+          // API_BASE may be a relative subpath (/dashboard_v2) — resolve against
+          // the page URL so new URL() accepts it.
+          return fetchWithRedirectFallback(new URL(`${API_BASE}${pathAndSearch}`, window.location.href), input, enriched ? withCredentials(enriched) : withCredentials(init));
         }
         // URL object already targeting the API base.
         if (input.origin === API_BASE && pathAndSearch.startsWith('/api/')) {

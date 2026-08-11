@@ -673,13 +673,13 @@ describe('welcome landing page routing', () => {
   });
 
   it('renames the web dashboard HTML output away from root index.html', () => {
-    assert.match(viteConfigSource, /function dashboardHtmlOutputPlugin\(\)/);
+    assert.match(viteConfigSource, /function dashboardHtmlOutputPlugin\(basePath: string\)/);
     assert.match(viteConfigSource, /enforce:\s*'post'/);
     assert.match(viteConfigSource, /Object\.entries\(bundle\)\.find/);
     assert.match(viteConfigSource, /output\.fileName === 'index\.html'/);
     assert.match(viteConfigSource, /delete bundle\[bundleKey\]/);
     assert.match(viteConfigSource, /dashboardHtml\.fileName = 'dashboard\.html'/);
-    assert.match(viteConfigSource, /!isDesktopBuild && dashboardHtmlOutputPlugin\(\)/);
+    assert.match(viteConfigSource, /!isDesktopBuild && dashboardHtmlOutputPlugin\(basePath\)/);
   });
 
   it('does not keep stale welcome exclusions in the SPA catch-all rewrite', () => {
@@ -761,7 +761,9 @@ describe('welcome landing page routing', () => {
   });
 
   it('starts installed PWAs on /dashboard, not the public welcome page', () => {
-    assert.match(viteConfigSource, /start_url:\s*'\/dashboard'/);
+    // Root builds keep the canonical /dashboard start_url; subpath (self-hosted)
+    // builds scope the install to the subpath mount instead.
+    assert.match(viteConfigSource, /start_url:\s*basePath === '\/' \? '\/dashboard' : basePath/);
   });
 
   it('sitemap lists dashboard routes and does not list legacy /welcome', () => {

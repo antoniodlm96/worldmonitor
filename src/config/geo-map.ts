@@ -3,6 +3,7 @@
 // chains (related-assets, infrastructure-cascade), never by the eager
 // convergence/CII boot path, so they ride a separate lazy chunk (geo-map-data).
 import type { UnderseaCable, NuclearFacility, EconomicCenter, Spaceport, CriticalMineralProject } from '@/types';
+import { publicAssetUrl } from './public-base';
 
 // Static baseline — authoritative live data is in Redis key infrastructure:submarine-cables:v1
 // (seeded weekly by scripts/seed-submarine-cables.mjs on Railway)
@@ -2648,12 +2649,12 @@ export const SANCTIONED_COUNTRIES_ALPHA2: Record<string, 'severe' | 'high' | 'mo
 };
 
 export const MAP_URLS = {
-  world: '/data/countries-50m.json',
+  world: publicAssetUrl('/data/countries-50m.json'),
   // Mobile uses the lower-resolution 110m topology (~86% fewer arc points) to cut
   // styleLayout. It omits 64 micro-state/territory base-map outlines (e.g. Bahrain,
   // Singapore, Hong Kong); event overlays are positioned by lat/lon and unaffected
   // (#4443 U6 — accepted tradeoff).
-  worldMobile: '/data/countries-110m.json',
+  worldMobile: publicAssetUrl('/data/countries-110m.json'),
 };
 
 /** Country topology URL — mobile gets the lighter 110m topology, desktop the full 50m. */

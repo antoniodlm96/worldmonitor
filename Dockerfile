@@ -19,6 +19,15 @@ RUN npm ci --ignore-scripts
 # Copy full source
 COPY . .
 
+# Subpath deployment support (build-time Vite envs):
+#   VITE_BASE_PATH   URL path the SPA is served under, e.g. /dashboard_v2/
+#                    (default '/' = origin root). See vite.config.ts `base`.
+#   VITE_WS_API_URL  API base for installWebApiRedirect — must be the same
+#                    subpath without the trailing slash, e.g. /dashboard_v2
+ARG VITE_BASE_PATH=/
+ARG VITE_WS_API_URL=
+ENV VITE_BASE_PATH=$VITE_BASE_PATH VITE_WS_API_URL=$VITE_WS_API_URL
+
 # Compile TypeScript API handlers → self-contained ESM bundles
 # Output is api/**/*.js alongside the source .ts files
 RUN node docker/build-handlers.mjs

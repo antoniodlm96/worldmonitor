@@ -60,6 +60,18 @@ const DEFAULT_MIN_INTERVAL_MS = 60_000;
  *  respects browser background-tab throttling. */
 const DEFAULT_PERIODIC_INTERVAL_MS = 10 * 60_000;
 
+// Build-time SPA base path (Vite `base`). Self-hosted subpath deployments
+// (/dashboard_v2/) serve build-hash.txt under the subpath mount, so the check
+// must fetch it through the base. Root deployments are unchanged. Guarded for
+// node:test runners where import.meta.env does not exist.
+const BASE_URL = (() => {
+  try {
+    return import.meta.env?.BASE_URL as string | undefined ?? '/';
+  } catch {
+    return '/';
+  }
+})();
+
 /**
  * Install listeners that compare the running bundle's hash against the
  * deployed hash and reload on mismatch. Three trigger paths:
@@ -120,7 +132,7 @@ export function installStaleBundleCheck(options: StaleBundleCheckOptions = {}): 
     try {
       // Cache-bust to defeat any intermediate proxy that might serve a
       // stale build-hash.txt (the file itself is emitted with the deploy).
-      const res = await fetchImpl(`/build-hash.txt?t=${t}`, { cache: 'no-store' });
+      const res = await fetchImpl(`${BASE_URL}build-hash.txt?t=${t}`, { cache: 'no-store' });
       if (!res.ok) return;
       const deployedHash = (await res.text()).trim();
       if (!deployedHash || deployedHash === 'dev') return;

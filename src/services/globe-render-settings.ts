@@ -1,3 +1,5 @@
+import { publicAssetUrl } from '@/config/public-base';
+
 export type GlobeRenderScale = 'auto' | '1' | '1.5' | '2' | '3';
 export type GlobeTexture = 'topographic' | 'blue-marble';
 
@@ -80,8 +82,8 @@ export const GLOBE_TEXTURE_OPTIONS: { value: GlobeTexture; label: string }[] = [
 ];
 
 export const GLOBE_TEXTURE_URLS: Record<GlobeTexture, string> = {
-  'topographic': '/textures/earth-topo-bathy.jpg',
-  'blue-marble': '/textures/earth-blue-marble.jpg',
+  'topographic': publicAssetUrl('/textures/earth-topo-bathy.jpg'),
+  'blue-marble': publicAssetUrl('/textures/earth-blue-marble.jpg'),
 };
 
 export function getGlobeTexture(): GlobeTexture {

@@ -289,7 +289,7 @@ function htmlVariantPlugin(activeMeta: VariantMeta, activeVariant: string, isDes
   };
 }
 
-function dashboardHtmlOutputPlugin(): Plugin {
+function dashboardHtmlOutputPlugin(basePath: string): Plugin {
   return {
     name: 'wm-dashboard-html-output',
     apply: 'build',
@@ -306,7 +306,7 @@ function dashboardHtmlOutputPlugin(): Plugin {
       delete bundle[bundleKey];
       dashboardHtml.fileName = 'dashboard.html';
       if (typeof dashboardHtml.source === 'string') {
-        dashboardHtml.source = deferDashboardStylesheetLinks(dashboardHtml.source, bundle);
+        dashboardHtml.source = deferDashboardStylesheetLinks(dashboardHtml.source, bundle, basePath);
       }
       bundle['dashboard.html'] = dashboardHtml;
     },
@@ -345,12 +345,16 @@ function variantDashboardHtmlPlugin(): Plugin {
   };
 }
 
-function shouldDeferDashboardStylesheet(tag: string, bundle: OutputBundle): boolean {
+function shouldDeferDashboardStylesheet(tag: string, bundle: OutputBundle, basePath: string): boolean {
   const href = tag.match(/\bhref=["']([^"']+\.css)["']/i)?.[1];
   if (!href) return false;
 
-  const bundleKey = href.replace(/^\//, '');
-  const asset = bundle[bundleKey];
+  // Strip the configured base path prefix ('' for root, '/dashboard_v2/' for
+  // subpath builds) so the href resolves to a bundle key in the emit output.
+  const strippedHref = basePath !== '/' && href.startsWith(basePath)
+    ? href.slice(basePath.length)
+    : href.replace(/^\//, '');
+  const asset = bundle[strippedHref];
   if (!asset || asset.type !== 'asset') return false;
 
   const sourceLength = typeof asset.source === 'string'
@@ -371,10 +375,10 @@ function shouldDeferDashboardStylesheet(tag: string, bundle: OutputBundle): bool
 // inline critical CSS in index.html applies (the bundle is @layer base), so any
 // future *unconditional* inline rule will beat the bundle (see PR #4346) — keep
 // inline rules scoped to a transient/closed state.
-function deferDashboardStylesheetLinks(html: string, bundle: OutputBundle): string {
+function deferDashboardStylesheetLinks(html: string, bundle: OutputBundle, basePath: string): string {
   return html.replace(/<link\b(?=[^>]*\brel=["']stylesheet["'])(?=[^>]*\bhref=["'][^"']+\.css["'])[^>]*>/gi, (tag) => {
     if (/\bdata-wm-deferred-style=/.test(tag) || /\bmedia=/.test(tag)) return tag;
-    if (!shouldDeferDashboardStylesheet(tag, bundle)) return tag;
+    if (!shouldDeferDashboardStylesheet(tag, bundle, basePath)) return tag;
     const deferredTag = tag.replace(/\s*\/?>$/, ' media="print" data-wm-deferred-style="dashboard">');
     return `${deferredTag}\n    <noscript>${tag}</noscript>`;
   });
@@ -874,7 +878,20 @@ export default defineConfig(({ mode }) => {
   const activeVariant = process.env.VITE_VARIANT || 'full';
   const activeMeta = VARIANT_META[activeVariant] || VARIANT_META.full;
 
+  // Vite `base` — the URL path the SPA is served under. Default '/' (main
+  // deployment on worldmonitor.app, Vercel). Self-hosted deployments behind a
+  // subpath mount (Tailscale `serve /dashboard_v2` → container) build with
+  // VITE_BASE_PATH=/dashboard_v2/ so every emitted asset URL lives under the
+  // mount, which the reverse proxy strips back to the container root. Must end
+  // with a slash (Vite requirement); VITE_WS_API_URL must match the same path
+  // without the trailing slash (see runtime.ts).
+  const configuredBasePath = env.VITE_BASE_PATH || '/';
+  const basePath = configuredBasePath === '/'
+    ? '/'
+    : `/${configuredBasePath.replace(/^\/+|\/+$/g, '')}/`;
+
   return {
+    base: basePath,
     html: {
       cspNonce: STATIC_SCRIPT_NONCE,
     },
@@ -907,7 +924,7 @@ export default defineConfig(({ mode }) => {
         },
       },
       htmlVariantPlugin(activeMeta, activeVariant, isDesktopBuild),
-      !isDesktopBuild && dashboardHtmlOutputPlugin(),
+      !isDesktopBuild && dashboardHtmlOutputPlugin(basePath),
       // Variant subdomain SEO pages only make sense on the web deployment,
       // which is always the 'full' build (variant selection is runtime by
       // hostname). Desktop and dedicated VITE_VARIANT builds skip it.
@@ -936,17 +953,19 @@ export default defineConfig(({ mode }) => {
           name: `${activeMeta.siteName} - ${activeMeta.subject}`,
           short_name: activeMeta.shortName,
           description: activeMeta.description,
-          start_url: '/dashboard',
-          scope: '/',
+          // Root builds keep the canonical /dashboard start_url; subpath builds
+          // (self-hosted) scope the install to the subpath mount.
+          start_url: basePath === '/' ? '/dashboard' : basePath,
+          scope: basePath,
           display: 'standalone',
           orientation: 'any',
           theme_color: '#0a0f0a',
           background_color: '#0a0f0a',
           categories: activeMeta.categories,
           icons: [
-            { src: '/favico/android-chrome-192x192.png', sizes: '192x192', type: 'image/png' },
-            { src: '/favico/android-chrome-512x512.png', sizes: '512x512', type: 'image/png' },
-            { src: '/favico/android-chrome-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+            { src: `${basePath}favico/android-chrome-192x192.png`, sizes: '192x192', type: 'image/png' },
+            { src: `${basePath}favico/android-chrome-512x512.png`, sizes: '512x512', type: 'image/png' },
+            { src: `${basePath}favico/android-chrome-512x512.png`, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
           ],
         },
 
@@ -982,7 +1001,9 @@ export default defineConfig(({ mode }) => {
           // Web Push handler (Phase 6). importScripts runs in the SW
           // context; /push-handler.js is a static file copied from
           // public/ and attaches 'push' + 'notificationclick' listeners.
-          importScripts: ['/push-handler.js'],
+          // Root builds keep the canonical /push-handler.js; subpath builds
+          // load it from the subpath mount.
+          importScripts: [`${basePath}push-handler.js`],
 
           runtimeCaching: [
             {
