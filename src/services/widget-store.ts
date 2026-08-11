@@ -2,6 +2,7 @@ import { loadFromStorage, saveToStorage } from '@/utils';
 import { clearPanelColSpanEntry, clearPanelSpanEntry } from '@/utils/panel-storage';
 import { getAuthState } from '@/services/auth-state';
 import { isEntitled, getEntitlementState } from '@/services/entitlements';
+import { isPersonalMode } from '@/shared/personal-mode';
 import {
   clearLegacyKeyStorage,
   migrateLegacyKeysToHttpOnlySession,
@@ -222,6 +223,7 @@ export function isProWidgetEnabled(): boolean {
 
 export function isProUser(): boolean {
   return (
+    isPersonalMode() ||
     isWidgetFeatureEnabled() ||
     isProWidgetEnabled() ||
     getAuthState().user?.role === 'pro' ||
