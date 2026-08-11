@@ -117,6 +117,7 @@ const CLIENT_ENV_ALLOWLIST = new Set([
   'VITE_VARIANT',
   'VITE_WS_API_URL',
   'VITE_WS_RELAY_URL',
+  'VITE_LOCAL_UNLOCK',
 ]);
 
 // Safe envPrefix entries — anything else exposes unprefixed env vars to

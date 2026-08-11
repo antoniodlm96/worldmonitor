@@ -60,6 +60,15 @@ function getCookie(req, name) {
 // Async because session validation uses Web Crypto (crypto.subtle.sign).
 // All call sites await this — see grep for migration history.
 export async function validateApiKey(req, options = {}) {
+  // Local-first mode (WM_LOCAL_UNLOCK=1): self-hosted instance with no Clerk,
+  // no Convex and no API keys answers every RPC anonymously. Mirrors the
+  // gateway's localUnlock bypass (server/gateway.ts) — in the docker/sidecar
+  // path handlers are invoked directly without the gateway, so the unlock must
+  // live here too. Leave the `required` flag true so callers that gate on it
+  // still pass through their normal (unlocked) path.
+  if (process.env.WM_LOCAL_UNLOCK === '1') {
+    return { valid: true, required: true, kind: 'local-unlock' };
+  }
   const forceKey = options.forceKey === true;
   const headerKey = getHeaderApiKey(req);
   const sessionCookie = getCookie(req, 'wm-session');

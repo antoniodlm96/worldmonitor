@@ -1160,12 +1160,20 @@ export function createDomainGateway(
     const seedRefreshVerified = await isResilienceRankingSeedRefreshRequest(request, pathname);
     const relayWarmPingVerified = await isRelayWarmPingRequest(request, pathname);
     const requiresDirectLlmQuota = !internalMcpVerified && await shouldReserveGatewayDirectLlmQuota(request, pathname);
-    const isTierGated = !internalMcpVerified && !isPublicNoAuthRpc && !seedRefreshVerified && !relayWarmPingVerified && getRequiredTier(pathname) !== null;
-    const needsLegacyProBearerGate = !internalMcpVerified && !isPublicNoAuthRpc && PREMIUM_RPC_PATHS.has(pathname) && !isTierGated;
+    // Local-first mode: WM_LOCAL_UNLOCK=1 removes every auth/premium gate so a
+    // self-hosted instance (no Clerk, no Convex, no API keys) answers all RPCs
+    // anonymously. OR-ing into isPublicNoAuthRpc inherits its effect on the
+    // key-check ternary, isTierGated, needsLegacyProBearerGate, and the
+    // Pro-freshness resolution below; the entitlement guard and the direct-LLM
+    // quota guard need explicit exclusions (they do not read this flag).
+    const localUnlock = process.env.WM_LOCAL_UNLOCK === '1';
+    const isUnlockedNoAuthRpc = isPublicNoAuthRpc || localUnlock;
+    const isTierGated = !internalMcpVerified && !isUnlockedNoAuthRpc && !seedRefreshVerified && !relayWarmPingVerified && getRequiredTier(pathname) !== null;
+    const needsLegacyProBearerGate = !internalMcpVerified && !isUnlockedNoAuthRpc && PREMIUM_RPC_PATHS.has(pathname) && !isTierGated;
     const isProFreshCacheRpc = PRO_FRESH_CACHE_RPC_PATHS.has(pathname);
     const needsProFreshnessResolution =
       !internalMcpVerified &&
-      !isPublicNoAuthRpc &&
+      !isUnlockedNoAuthRpc &&
       isProFreshCacheRpc &&
       request.headers.get('Authorization')?.startsWith('Bearer ') === true;
     let rateLimitPrincipalUserId: string | undefined;
@@ -1197,7 +1205,7 @@ export function createDomainGateway(
     // request). Telemetry stays attributed via the verified userId set
     // above; entitlement re-check (`features.tier ≥ 1 && mcpAccess`) was
     // already performed before flipping `internalMcpVerified = true`.
-    let keyCheck: { valid: boolean; required: boolean; error?: string; kind?: 'enterprise' | 'session' | 'user' } = internalMcpVerified || isPublicNoAuthRpc || seedRefreshVerified || relayWarmPingVerified
+    let keyCheck: { valid: boolean; required: boolean; error?: string; kind?: 'enterprise' | 'session' | 'user' } = internalMcpVerified || isUnlockedNoAuthRpc || seedRefreshVerified || relayWarmPingVerified
       ? { valid: true, required: false }
       : ((await validateApiKey(request, {
           forceKey: (isTierGated && !sessionUserId) || needsLegacyProBearerGate,
@@ -1499,7 +1507,7 @@ export function createDomainGateway(
     // routes require tier 2, but Pro MCP callers only reach the gateway
     // through the MCP edge's whitelisted tool set.
     const isEnterpriseAuth = keyCheck.valid && wmKey && !isUserApiKey && keyCheck.kind === 'enterprise';
-    if (!isEnterpriseAuth && !internalMcpVerified && !seedRefreshVerified && !relayWarmPingVerified) {
+    if (!localUnlock && !isEnterpriseAuth && !internalMcpVerified && !seedRefreshVerified && !relayWarmPingVerified) {
       const entitlementCheck = await checkEntitlementDetailed(sessionUserId, pathname, corsHeaders, {
         clerkRole: sessionRole,
       });
@@ -1857,7 +1865,7 @@ export function createDomainGateway(
       }
     }
 
-    if (requiresDirectLlmQuota && !isEnterpriseAuth) {
+    if (requiresDirectLlmQuota && !isEnterpriseAuth && !localUnlock) {
       if (!sessionUserId) {
         emitRequest(401, 'auth_401', null);
         return createGatewayAuthErrorResponse(401, 'Pro authentication required', corsHeaders);

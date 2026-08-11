@@ -632,3 +632,32 @@ describe("#5379 + #4770 — entitlement resolution outcomes are pinned", () => {
     expect(routeHandler).toHaveBeenCalledTimes(1);
   });
 });
+
+// ── WM_LOCAL_UNLOCK=1 — local-first no-login mode ────────────────────────────
+// A self-hosted instance (no Clerk, no Convex, no API keys) must answer every
+// RPC anonymously. The flag must 401 when absent and 200 when set, with the
+// upstream handler actually invoked (proving the gate, not the status, moved).
+describe("WM_LOCAL_UNLOCK local-first bypass", () => {
+  test("anonymous PREMIUM_RPC_PATHS request is 401 without the flag", async () => {
+    const res = await makeGateway()(new Request(`https://www.worldmonitor.app${PREMIUM_PATH}`, { method: "POST" }), ctx);
+    expect(res.status).toBe(401);
+    expect(routeHandler).not.toHaveBeenCalled();
+  });
+
+  test("anonymous PREMIUM_RPC_PATHS request is 200 with WM_LOCAL_UNLOCK=1", async () => {
+    process.env.WM_LOCAL_UNLOCK = "1";
+    const res = await makeGateway()(new Request(`https://www.worldmonitor.app${PREMIUM_PATH}`, { method: "POST" }), ctx);
+    expect(res.status).toBe(200);
+    expect(routeHandler).toHaveBeenCalledTimes(1);
+    delete process.env.WM_LOCAL_UNLOCK;
+  });
+
+  test("anonymous tier-gated request skips the entitlement gate with WM_LOCAL_UNLOCK=1", async () => {
+    process.env.WM_LOCAL_UNLOCK = "1";
+    requiredTiers.set(REGULAR_PATH, 1);
+    const res = await makeGateway()(new Request(`https://www.worldmonitor.app${REGULAR_PATH}`, { method: "GET" }), ctx);
+    expect(res.status).toBe(200);
+    expect(routeHandler).toHaveBeenCalledTimes(1);
+    delete process.env.WM_LOCAL_UNLOCK;
+  });
+});
